@@ -4,7 +4,8 @@ const bodyParser = require("body-parser");
 const ejs = require("ejs");
 const mongoose = require('mongoose')
 // const encrypt = require('mongoose-encryption')
-const md5 = require('md5')
+// const md5 = require('md5')
+const bcrypt = require('bcrypt')
 
 const app = express()
 
@@ -41,15 +42,15 @@ app.get('/register', (req, res)=>{
 
 app.post('/login', async (req, res)=>{
     const username = req.body.username
-    const password = md5(req.body.password)
+    const password = req.body.password
     try {
         const isUser = await User.findOne({email: username})
         if(isUser) {
-            if(isUser.password === password) {
+            if(await bcrypt.compare(password, isUser.password)) {
                 res.render('secrets')
                 console.log('login successful');
             }
-        }
+        } 
     } catch (error) {
         console.error('Error saving user:', error);
     }
@@ -57,9 +58,11 @@ app.post('/login', async (req, res)=>{
 
 app.post('/register', async (req, res) => {
     try {
+        const saltRounds = 10;
+        const hashedPassword = await bcrypt.hash(req.body.password, saltRounds);
         const newUser = new User({
             email: req.body.username,
-            password: md5(req.body.password)
+            password: hashedPassword
         });
         await newUser.save();
         res.render('secrets')
